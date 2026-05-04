@@ -1,28 +1,14 @@
-# Python
 __pycache__/
 *.py[cod]
-*.egg-info/
+*$py.class
+*.so
+.env
+.venv/
+venv/
+node_modules/
 dist/
 build/
-.eggs/
-venv/
-.env
-
-# Node
-node_modules/
-frontend/dist/
-frontend/build/
-.npm
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
+*.db
+*.sqlite3
 .DS_Store
-Thumbs.db
-
-# Docker
 *.log

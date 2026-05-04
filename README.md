@@ -1,58 +1,29 @@
 # 🏆 TradeArena
 
-**Telegram Mini App for crypto trading battles.**
+Telegram Mini App for crypto trading battles.
 
-Compete with other traders in real-time. Trade crypto on virtual accounts, climb the leaderboard, win prizes in TON.
+Compete in real-time trading rounds with virtual funds. Who earned more — wins.
 
-## 🚀 Features
+## Features
+- 🔐 Telegram authentication
+- 💰 Virtual $10,000 starting balance
+- 📊 Real-time BTC, ETH, SOL prices
+- ⏱ 1-hour trading rounds
+- 🏆 Leaderboard & rankings
+- 💎 TON payments for premium features
+- 🎯 Boosts & power-ups
+- 👥 Referral system
 
-- ⚡ Real-time crypto trading with live prices
-- 🏆 Hourly/daily trading battles
-- 📊 Leaderboard among friends & global
-- 💎 Premium boosts & tools
-- 🔗 TON payments integration
-- 📱 Telegram Mini App — no download needed
-
-## 🏗 Architecture
-
-```
-tradearena/
-├── backend/          # FastAPI + WebSocket server
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── api/
-│   │   ├── core/
-│   │   ├── models/
-│   │   ├── services/
-│   │   └── ws/
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/         # React + Telegram Web App SDK
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── pages/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── services/
-│   │   └── styles/
-│   ├── package.json
-│   └── Dockerfile
-├── docker-compose.yml
-└── .env.example
-```
-
-## ⚡ Quick Start
+## Quick Start
 
 ```bash
 cp .env.example .env
-# Edit .env with your keys
+# Edit .env with your values
 docker-compose up -d
 ```
 
-## 🔧 Environment Variables
-
-See `.env.example` for all configuration options.
-
-## 📄 License
-
-MIT
+## Tech Stack
+- **Backend**: FastAPI + SQLite + WebSocket
+- **Frontend**: React + Telegram Web App SDK
+- **Payments**: TON Connect
+- **Deploy**: Docker Compose
