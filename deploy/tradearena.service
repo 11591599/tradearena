@@ -1,0 +1,15 @@
+[Unit]
+Description=TradeArena Backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tradearena
+Environment=PATH=/opt/tradearena/venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/tradearena/venv/bin/python src/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
