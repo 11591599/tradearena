@@ -9,7 +9,7 @@ python-jose[cryptography]>=3.3.0
 python-telegram-bot>=21.0
 pydantic>=2.6.0
 pydantic-settings>=2.2.0
-aiohttp>=3.9.0
+aiohttp==3.13.4
 loguru>=0.7.0
 ccxt>=4.0.0
 tonclient>=0.1.0
