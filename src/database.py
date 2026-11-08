@@ -16,7 +16,7 @@ class Base(DeclarativeBase):
 
 async def init_db():
     """Create all tables."""
-    from src.models import User, Round, Trade, Payment  # noqa
+    from src.models import User, Mission, UserMission, Battle, BattleEntry, Round, Trade, Payment  # noqa
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized")

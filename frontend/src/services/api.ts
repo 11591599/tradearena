@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import axios from 'axios'
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 })
 
 API.interceptors.request.use((config) => {
@@ -39,7 +39,7 @@ export function usePrices(symbols: string[] = ['BTC-USDT', 'ETH-USDT', 'SOL-USDT
 
   useEffect(() => {
     const fetch = () => {
-      API.get('/trading/prices', { params: { symbols: symbols.join(',') } })
+      API.get('/prices', { params: { symbols: symbols.join(',') } })
         .then(({ data }) => setPrices(data.prices || {}))
         .catch(() => {})
     }

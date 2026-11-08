@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { TrendingUp, Swords, Trophy, User } from 'lucide-react'
+import { TrendingUp, Swords, Trophy, User, Compass, Sparkles } from 'lucide-react'
 
 export default function Nav() {
   const items = [
     { to: '/', icon: TrendingUp, label: 'Trade' },
     { to: '/arena', icon: Swords, label: 'Arena' },
+    { to: '/battles', icon: Sparkles, label: 'Battles' },
+    { to: '/quests', icon: Compass, label: 'Quests' },
     { to: '/leaderboard', icon: Trophy, label: 'Top' },
     { to: '/profile', icon: User, label: 'Profile' },
   ]

@@ -31,8 +31,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="TradeArena",
-    description="Telegram Mini App for crypto trading battles",
-    version="1.0.0",
+    description="Telegram Mini App for crypto trading battles with quests, battles and virtual currency",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
