@@ -1,54 +1,61 @@
-"""TradeArena — Telegram Mini App for crypto trading battles."""
+"""TradeArena — Telegram Mini App and game API."""
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from src.database import init_db
 from src.api import router as api_router
-from src.bot import setup_bot
+from src.bot import setup_bot, stop_bot
+from src.database import init_db
 from src.game.engine import TradingEngine
-
 
 engine = TradingEngine()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup and shutdown events."""
-    logger.info("🚀 TradeArena starting...")
+    logger.info("Starting TradeArena...")
     await init_db()
     await engine.start()
-    bot_app = await setup_bot()
-    yield
-    await engine.stop()
-    if bot_app:
-        await bot_app.shutdown()
-    logger.info("👋 TradeArena stopped.")
+    bot_app = None
+    try:
+        bot_app = await setup_bot()
+        yield
+    finally:
+        await engine.stop()
+        if bot_app:
+            await stop_bot(bot_app)
+        logger.info("TradeArena stopped.")
 
 
 app = FastAPI(
     title="TradeArena",
-    description="Telegram Mini App for crypto trading battles with quests, battles and virtual currency",
-    version="1.1.0",
+    description="Telegram Mini App for virtual trading battles, missions and rewards",
+    version="1.2.0",
     lifespan=lifespan,
 )
 
+# The Mini App is served from this same origin. Do not enable wildcard credentialed CORS.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
-
 app.include_router(api_router, prefix="/api")
 
-# Serve frontend
-app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
+
+@app.get("/health", tags=["health"])
+async def health():
+    return {"status": "ok", "service": "tradearena"}
+
+
+app.mount("/", StaticFiles(directory="frontend/dist", html=True, check_dir=False), name="frontend")
 
 
 if __name__ == "__main__":
-    uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("src.main:app", host="0.0.0.0", port=8000)

@@ -1,124 +1,135 @@
-"""Telegram bot for TradeArena Mini App."""
+"""Telegram bot lifecycle and commands for TradeArena."""
 import os
-import logging
-from telegram import Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes
+from urllib.parse import urlparse
+
+import httpx
 from loguru import logger
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    Update,
+    WebAppInfo,
+)
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-WEBAPP_URL = os.getenv("WEBHOOK_URL", "https://tradearena.app")
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send welcome message with WebApp button."""
-    keyboard = [
-        [KeyboardButton(text="🎮 Play TradeArena", web_app=WebAppInfo(url=WEBAPP_URL))],
-        [KeyboardButton(text="🏆 Leaderboard"), KeyboardButton(text="💎 Premium")],
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-    await update.message.reply_text(
-        "🏆 *TradeArena*\n\n"
-        "Compete in crypto trading battles!\n"
-        "$10,000 virtual balance. Real prizes.\n\n"
-        "🎮 Tap *Play* to start trading!\n"
-        "📊 BTC, ETH, SOL — all live prices\n"
-        "🏆 Win rounds, climb the leaderboard\n"
-        "💎 Premium unlocks more features\n\n"
-        "Invite friends and get +20% bonus!",
-        parse_mode="Markdown",
-        reply_markup=reply_markup,
-    )
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+WEBAPP_URL = os.getenv("WEBAPP_URL", "").strip()
+API_BASE_URL = os.getenv("INTERNAL_API_URL", "http://127.0.0.1:8000/api").rstrip("/")
 
 
-async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Open the Mini App."""
-    keyboard = [
-        [KeyboardButton(text="🎮 Play TradeArena", web_app=WebAppInfo(url=WEBAPP_URL))],
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-    await update.message.reply_text(
-        "🎮 Open TradeArena and start trading!",
-        reply_markup=reply_markup,
-    )
-
-
-async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show top players."""
-    import httpx
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"http://localhost:8000/api/leaderboard/global")
-            players = resp.json()[:10]
-
-        text = "🏆 *Top Traders*\n\n"
-        medals = ["🥇", "🥈", "🥉"]
-        for i, p in enumerate(players):
-            medal = medals[i] if i < 3 else f"{i+1}."
-            text += f"{medal} {p['username']} — {p['pnl']:+.2f} USDT\n"
-
-        if not players:
-            text = "🏆 No players yet. Be the first!"
-
-        await update.message.reply_text(text, parse_mode="Markdown")
-    except Exception as e:
-        logger.error(f"Leaderboard error: {e}")
-        await update.message.reply_text("Error loading leaderboard. Try again later.")
-
-
-async def premium(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Premium info."""
-    await update.message.reply_text(
-        "💎 *TradeArena Premium*\n\n"
-        "• Extended charts (1m, 5m, 15m)\n"
-        "• Priority matching\n"
-        "• 5x boosts daily\n"
-        "• Premium badge\n"
-        "• 20+ trading pairs\n"
-        "• Auto stop-loss\n\n"
-        "Price: 0.5 TON (lifetime)\n\n"
-        "Open the app to purchase!",
-        parse_mode="Markdown",
-    )
-
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Help message."""
-    await update.message.reply_text(
-        "🏆 *TradeArena Commands*\n\n"
-        "/start — Open the game\n"
-        "/play — Start trading\n"
-        "/leaderboard — Top players\n"
-        "/premium — Premium features\n"
-        "/help — This message",
-        parse_mode="Markdown",
-    )
-
-
-async def setup_bot():
-    """Initialize and return bot application."""
+def _validate_configuration() -> None:
     if not BOT_TOKEN:
-        logger.warning("TELEGRAM_BOT_TOKEN not set, bot disabled")
+        raise RuntimeError("TELEGRAM_BOT_TOKEN is required. Set it in the server environment.")
+    parsed = urlparse(WEBAPP_URL)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise RuntimeError("WEBAPP_URL must be the public HTTPS address of the deployed Mini App.")
+
+
+def _play_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton(text="🎮 Open TradeArena", web_app=WebAppInfo(url=WEBAPP_URL))]],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.effective_message:
+        return
+    await update.effective_message.reply_text(
+        "🌌 *TradeArena — enter the arena*\n\n"
+        "Trade with virtual funds, complete missions, collect tickets and challenge other players.\n\n"
+        "Tap below to open the secure Telegram Mini App.\n"
+        "Your Telegram account is verified when the app opens.",
+        parse_mode="Markdown",
+        reply_markup=_play_keyboard(),
+    )
+
+
+async def play(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            "Ready when you are. Open the arena below:", reply_markup=_play_keyboard()
+        )
+
+
+async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.effective_message:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            response = await client.get(f"{API_BASE_URL}/leaderboard/global")
+            response.raise_for_status()
+            payload = response.json()
+        players = payload.get("leaderboard", payload) if isinstance(payload, dict) else payload
+        if not isinstance(players, list):
+            raise ValueError("Unexpected leaderboard response")
+        lines = ["🏆 *Arena leaderboard*", ""]
+        medals = ["🥇", "🥈", "🥉"]
+        for index, player in enumerate(players[:10]):
+            name = str(player.get("username") or "Trader").replace("[", "\\[")
+            pnl = float(player.get("pnl", 0))
+            lines.append(f"{medals[index] if index < 3 else f'{index + 1}.'} {name} — {pnl:+.2f}")
+        if not players:
+            lines.append("No traders yet. Be the first to enter the arena!")
+        await update.effective_message.reply_text("\n".join(lines), parse_mode="Markdown")
+    except (httpx.HTTPError, ValueError, TypeError) as exc:
+        logger.warning("Could not load leaderboard: {}", exc)
+        await update.effective_message.reply_text("Leaderboard is temporarily unavailable. Try again soon.")
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            "🌌 *TradeArena commands*\n\n"
+            "/start — open the arena\n"
+            "/play — open the Mini App\n"
+            "/leaderboard — top traders\n"
+            "/help — show this help",
+            parse_mode="Markdown",
+            reply_markup=_play_keyboard(),
+        )
+
+
+async def setup_bot() -> Application | None:
+    """Validate settings, verify bot token with Telegram, and start long polling."""
+    if not BOT_TOKEN:
+        logger.warning("TELEGRAM_BOT_TOKEN is not set; Telegram bot is disabled.")
         return None
 
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("play", play))
-    app.add_handler(CommandHandler("leaderboard", leaderboard))
-    app.add_handler(CommandHandler("premium", premium))
-    app.add_handler(CommandHandler("help", help_command))
+    _validate_configuration()
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("play", play))
+    application.add_handler(CommandHandler("leaderboard", leaderboard))
+    application.add_handler(CommandHandler("help", help_command))
 
-    await app.initialize()
-    await app.start()
+    try:
+        await application.initialize()
+        bot_info = await application.bot.get_me()
+        await application.start()
+        if application.updater is None:
+            raise RuntimeError("Telegram polling updater is unavailable.")
+        await application.updater.start_polling(drop_pending_updates=True)
+    except Exception:
+        if application.updater and application.updater.running:
+            await application.updater.stop()
+        if application.running:
+            await application.stop()
+        await application.shutdown()
+        raise
 
-    webhook_url = f"{WEBAPP_URL}/webhook"
-    await app.updater.start_webhook(
-        listen="0.0.0.0",
-        port=8001,
-        url_path="webhook",
-        webhook_url=webhook_url,
-    )
+    logger.info("Telegram bot @{} connected and polling.", bot_info.username)
+    return application
 
-    logger.info(f"Bot started with webhook: {webhook_url}")
-    return app
+
+async def stop_bot(application: Application) -> None:
+    """Stop polling and release Telegram resources in the correct order."""
+    if application.updater and application.updater.running:
+        await application.updater.stop()
+    if application.running:
+        await application.stop()
+    await application.shutdown()
+    logger.info("Telegram bot stopped.")
